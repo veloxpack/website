@@ -1,0 +1,17 @@
+{
+  "title": "CSI Driver Rclone",
+  "description": "The storage driver for Veloxpack.",
+  "icon": "HardDrive",
+  "root": true,
+  "pages": [
+    "index",
+    "install",
+    "quick-start",
+    "development",
+    "rclone-configuration",
+    "storageclass",
+    "driver-parameters",
+    "examples",
+    "troubleshooting"
+  ]
+}

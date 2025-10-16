@@ -1,0 +1,206 @@
+---
+title: Driver Parameters
+description: Complete reference for rclone.csi.veloxpack.io driver parameters.
+---
+
+## Overview
+
+The rclone CSI driver supports various parameters for configuring storage backends, mount options, and VFS caching. Parameters can be specified in StorageClass, PersistentVolume, or Kubernetes Secrets.
+
+## Core Parameters
+
+### Required Parameters
+
+| Parameter | Description | Example | Required |
+|-----------|-------------|---------|----------|
+| `remote` | Rclone remote name | `s3`, `gcs`, `azureblob` | Yes |
+| `remotePath` | Path within the remote storage | `my-bucket`, `/data` | Yes |
+
+### Optional Parameters
+
+| Parameter | Description | Example | Required |
+|-----------|-------------|---------|----------|
+| `configData` | Inline rclone configuration (INI format) | `[s3]\ntype = s3` | No |
+
+## Template Variables
+
+The driver supports dynamic path substitution using template variables:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `${pvc.metadata.name}` | PVC name | `my-pvc-12345` |
+| `${pvc.metadata.namespace}` | PVC namespace | `default` |
+| `${pv.metadata.name}` | PV name | `pv-rclone-abc123` |
+
+### Example Usage
+
+```yaml
+parameters:
+  remote: "s3"
+  remotePath: "buckets/${pvc.metadata.namespace}/${pvc.metadata.name}"
+```
+
+## Mount Options
+
+Mount options are specified in `mountOptions` field of StorageClass or PersistentVolume. For a complete list of available mount options, see the [rclone mount documentation](https://rclone.org/commands/rclone_mount/).
+
+### VFS Cache Options
+
+| Option | Description | Values | Example |
+|--------|-------------|--------|---------|
+| `vfs-cache-mode` | Cache mode | `off`, `minimal`, `writes`, `full` | `vfs-cache-mode=writes` |
+| `vfs-cache-max-size` | Maximum cache size | Size with unit | `vfs-cache-max-size=10G` |
+| `vfs-cache-max-age` | Max time since last access | Duration | `vfs-cache-max-age=1h` |
+| `vfs-cache-min-free-space` | Minimum free space | Size with unit | `vfs-cache-min-free-space=1G` |
+| `dir-cache-time` | Directory cache time | Duration | `dir-cache-time=30s` |
+
+### Mount Flags
+
+| Option | Description | Type | Example |
+|--------|-------------|------|---------|
+| `debug-fuse` | Debug FUSE internals | Boolean | `debug-fuse` |
+| `allow-other` | Allow access to other users | Boolean | `allow-other` |
+| `allow-non-empty` | Allow mounting over non-empty directory | Boolean | `allow-non-empty` |
+| `async-read` | Use asynchronous reads | Boolean | `async-read` |
+| `direct-io` | Use Direct IO (disables caching) | Boolean | `direct-io` |
+| `read-only` | Read-only access | Boolean | `read-only` |
+
+### VFS Options
+
+| Option | Description | Type | Example |
+|--------|-------------|------|---------|
+| `vfs-case-insensitive` | Case insensitive file matching | Boolean | `vfs-case-insensitive` |
+| `vfs-links` | Translate symlinks | Boolean | `vfs-links` |
+| `vfs-refresh` | Refresh directory cache on start | Boolean | `vfs-refresh` |
+| `no-seek` | Don't allow seeking in files | Boolean | `no-seek` |
+| `no-modtime` | Don't read/write modification time | Boolean | `no-modtime` |
+| `no-checksum` | Don't compare checksums | Boolean | `no-checksum` |
+
+## Backend-Specific Parameters
+
+### Amazon S3
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `type` | Backend type | `s3` |
+| `provider` | S3 provider | `AWS`, `Minio`, `DigitalOcean` |
+| `access_key_id` | Access key ID | `AKIAIOSFODNN7EXAMPLE` |
+| `secret_access_key` | Secret access key | `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` |
+| `region` | AWS region | `us-east-1` |
+| `endpoint` | Custom endpoint | `https://s3.amazonaws.com` |
+
+### Google Cloud Storage
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `type` | Backend type | `google cloud storage` |
+| `project_number` | GCP project number | `12345678` |
+| `service_account_file` | Service account file path | `/path/to/service-account.json` |
+| `service_account_credentials` | Service account JSON | `{"type":"service_account",...}` |
+
+### Azure Blob Storage
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `type` | Backend type | `azureblob` |
+| `account` | Storage account name | `mystorageaccount` |
+| `key` | Storage account key | `base64encodedkey` |
+| `endpoint` | Custom endpoint | `https://mystorageaccount.blob.core.windows.net/` |
+
+## Parameter Processing
+
+The driver processes parameters in this order:
+
+1. **Secrets**: Loaded as defaults from `csi.storage.k8s.io/node-publish-secret-name`
+2. **Volume Context**: Overrides secrets (from StorageClass parameters or PV volumeAttributes)
+3. **ConfigData**: Parsed INI format and merged with other parameters
+4. **Parameter Sanitization**: Remote prefixes removed, hyphens converted to underscores
+
+### Parameter Sanitization
+
+Parameters are sanitized for consistency:
+
+- `s3-endpoint` → `endpoint` (when remote is "s3")
+- `--cache-mode` → `cache_mode`
+- `EndPoint` → `endpoint`
+
+## CSI Parameters
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `csi.storage.k8s.io/node-publish-secret-name` | Secret name for credentials | `rclone-secret` |
+| `csi.storage.k8s.io/node-publish-secret-namespace` | Secret namespace | `default` |
+
+## Examples
+
+### Basic S3 Configuration
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rclone-s3-secret
+type: Opaque
+stringData:
+  remote: "s3"
+  remotePath: "my-bucket"
+  configData: |
+    [s3]
+    type = s3
+    provider = AWS
+    access_key_id = YOUR_ACCESS_KEY_ID
+    secret_access_key = YOUR_SECRET_ACCESS_KEY
+    region = us-east-1
+```
+
+### Multi-tenant Configuration
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-multitenant
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  remotePath: "buckets/${pvc.metadata.namespace}/${pvc.metadata.name}"
+mountOptions:
+  - vfs-cache-mode=writes
+  - vfs-cache-max-size=10G
+  - dir-cache-time=30s
+csi.storage.k8s.io/node-publish-secret-name: "rclone-secret"
+csi.storage.k8s.io/node-publish-secret-namespace: "default"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+```
+
+### Performance Tuning
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-rclone-performance
+spec:
+  mountOptions:
+    - vfs-cache-mode=full
+    - vfs-cache-max-size=50G
+    - vfs-cache-max-age=24h
+    - dir-cache-time=5m
+    - async-read
+    - vfs-read-ahead=1M
+  csi:
+    driver: rclone.csi.veloxpack.io
+    volumeHandle: performance-volume
+    volumeAttributes:
+      remote: "s3"
+      remotePath: "my-bucket"
+      configData: |
+        [s3]
+        type = s3
+        provider = AWS
+        access_key_id = YOUR_ACCESS_KEY_ID
+        secret_access_key = YOUR_SECRET_ACCESS_KEY
+        region = us-east-1
+```

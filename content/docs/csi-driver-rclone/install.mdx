@@ -1,0 +1,182 @@
+---
+title: Install
+description: Install the CSI driver using Helm or kubectl manifests.
+---
+
+## Prerequisites
+
+- Kubernetes 1.20+
+- kubectl configured
+- Container registry (for custom images)
+
+## Build From Source (Optional)
+
+```bash
+git clone https://github.com/veloxpack/csi-driver-rclone.git
+cd csi-driver-rclone
+
+# Build binary and image
+make build
+make container
+
+# (optional) Push to your registry
+make push
+
+# Use your registry and tag when deploying
+export REGISTRY=your-registry.com
+export IMAGE_VERSION=latest
+```
+
+## Install with kubectl (Kustomize)
+
+```bash
+# If using a custom image, update image refs first
+sed -i "s|image: .*|image: ${REGISTRY}/csi-rclone:${IMAGE_VERSION}|g" deploy/csi-rclone-controller.yaml
+sed -i "s|image: .*|image: ${REGISTRY}/csi-rclone:${IMAGE_VERSION}|g" deploy/csi-rclone-node.yaml
+
+# Apply controller, node, RBAC, driverinfo, namespace
+kubectl apply -k deploy/
+```
+
+### Custom Kustomization
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- namespace-csi-rclone.yaml
+- rbac-csi-rclone.yaml
+- csi-rclone-controller.yaml
+- csi-rclone-node.yaml
+- csi-rclone-driverinfo.yaml
+images:
+- name: csi-rclone
+  newName: your-registry.com/csi-rclone
+  newTag: latest
+```
+
+```bash
+kubectl apply -k .
+```
+
+## Install with Helm
+
+Create a `values.yaml`:
+
+```yaml
+image:
+  repository: your-registry.com/csi-rclone
+  tag: latest
+  pullPolicy: Always
+
+controller:
+  replicas: 2
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+node:
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+```
+
+```bash
+helm install csi-rclone ./charts/latest/csi-driver-rclone -f values.yaml -n kube-system
+```
+
+## Verify Installation
+
+```bash
+# Check driver pods
+kubectl get pods -n kube-system -l app=csi-rclone-controller
+kubectl get pods -n kube-system -l app=csi-rclone-node
+
+# Check CSIDriver
+kubectl get csidriver rclone.csi.veloxpack.io
+
+# Check driver logs
+kubectl logs -n kube-system -l app=csi-rclone-controller
+kubectl logs -n kube-system -l app=csi-rclone-node
+```
+
+## Driver Configuration
+
+The driver supports various configuration options via command-line flags:
+
+### Mount Options
+
+- `--allow-non-empty`: Allow mounting over non-empty directories
+- `--allow-other`: Allow access to other users
+- `--async-read`: Use asynchronous reads
+- `--debug-fuse`: Debug FUSE internals
+- `--direct-io`: Use Direct IO (disables caching)
+
+### VFS Options
+
+- `--vfs-cache-mode`: Cache mode (off|minimal|writes|full)
+- `--vfs-cache-max-size`: Maximum cache size
+- `--vfs-cache-max-age`: Max time since last access
+- `--dir-cache-time`: Directory cache time
+- `--read-only`: Read-only access
+
+### Default Parameters
+
+The driver sets these defaults:
+
+```yaml
+cache-info-age: "24h"
+cache-chunk-clean-interval: "5m"
+cache-dir: "/tmp/rclone-vfs-cache/"
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Driver won't start**: Check FUSE installation and permissions
+2. **Mount fails**: Verify rclone configuration and network connectivity
+3. **Performance issues**: Adjust VFS cache settings
+4. **Permission errors**: Check node permissions and FUSE setup
+
+### Debug Commands
+
+```bash
+# Check driver status
+kubectl get pods -n kube-system -l app=csi-rclone-controller
+kubectl get pods -n kube-system -l app=csi-rclone-node
+
+# Check driver logs
+kubectl logs -n kube-system -l app=csi-rclone-controller --tail=100
+kubectl logs -n kube-system -l app=csi-rclone-node --tail=100
+
+# Check CSIDriver
+kubectl get csidriver rclone.csi.veloxpack.io -o yaml
+
+# Check events
+kubectl get events --sort-by=.metadata.creationTimestamp
+```
+
+### Enable Debug Logging
+
+```yaml
+# In controller deployment
+args:
+  - "--v=5"
+  - "--logtostderr=true"
+  - "--stderrthreshold=INFO"
+
+# In node deployment
+args:
+  - "--v=5"
+  - "--logtostderr=true"
+  - "--stderrthreshold=INFO"
+```

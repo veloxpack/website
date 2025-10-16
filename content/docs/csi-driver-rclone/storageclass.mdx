@@ -1,0 +1,283 @@
+---
+title: StorageClass
+description: Configure StorageClass for dynamic volume provisioning with rclone CSI driver.
+---
+
+## Overview
+
+StorageClass defines how volumes are dynamically provisioned. The rclone CSI driver supports dynamic provisioning with various storage backends through StorageClass parameters.
+
+## Basic StorageClass
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-csi
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  remotePath: "my-bucket"
+csi.storage.k8s.io/node-publish-secret-name: "rclone-secret"
+csi.storage.k8s.io/node-publish-secret-namespace: "default"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+```
+
+## StorageClass Parameters
+
+### Required Parameters
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `remote` | Rclone remote name | `s3`, `gcs`, `azureblob`, `dropbox` |
+| `remotePath` | Path within the remote storage | `my-bucket`, `/data`, `buckets/tenant1` |
+
+### Optional Parameters
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `configData` | Inline rclone configuration | `[s3]\ntype = s3\nprovider = AWS` |
+
+### CSI Parameters
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `csi.storage.k8s.io/node-publish-secret-name` | Secret name for credentials | `rclone-secret` |
+| `csi.storage.k8s.io/node-publish-secret-namespace` | Secret namespace | `default` |
+
+## Dynamic Path Substitution
+
+Use template variables for multi-tenant storage isolation:
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-multitenant
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  # Each PVC gets its own isolated directory
+  remotePath: "buckets/${pvc.metadata.namespace}/${pvc.metadata.name}"
+csi.storage.k8s.io/node-publish-secret-name: "rclone-secret"
+csi.storage.k8s.io/node-publish-secret-namespace: "default"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: false
+```
+
+### Supported Template Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `${pvc.metadata.name}` | PVC name | `my-pvc-12345` |
+| `${pvc.metadata.namespace}` | PVC namespace | `default` |
+| `${pv.metadata.name}` | PV name | `pv-rclone-abc123` |
+
+## Performance Tuning
+
+### VFS Cache Configuration (via mountOptions)
+
+Configure VFS cache using `mountOptions` (not StorageClass `parameters`):
+
+```yaml
+apiVersion: v1
+kind: StorageClass
+metadata:
+  name: rclone-performance
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  remotePath: "my-bucket"
+mountOptions:
+  - vfs-cache-mode=writes
+  - vfs-cache-max-size=10G
+  - dir-cache-time=30s
+csi.storage.k8s.io/node-publish-secret-name: "rclone-secret"
+csi.storage.k8s.io/node-publish-secret-namespace: "default"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+```
+
+### Mount Options
+
+```yaml
+apiVersion: v1
+kind: StorageClass
+metadata:
+  name: rclone-debug
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  remotePath: "my-bucket"
+mountOptions:
+  - debug-fuse
+  - vfs-cache-mode=writes
+  - vfs-cache-max-size=5G
+csi.storage.k8s.io/node-publish-secret-name: "rclone-secret"
+csi.storage.k8s.io/node-publish-secret-namespace: "default"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+```
+
+For a complete list of available mount options, see the [rclone mount documentation](https://rclone.org/commands/rclone_mount/).
+
+## Volume Binding Modes
+
+### Immediate Binding
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-immediate
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  remotePath: "my-bucket"
+volumeBindingMode: Immediate
+csi.storage.k8s.io/node-publish-secret-name: "rclone-secret"
+csi.storage.k8s.io/node-publish-secret-namespace: "default"
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+```
+
+### WaitForFirstConsumer Binding
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-wait
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  remotePath: "my-bucket"
+volumeBindingMode: WaitForFirstConsumer
+csi.storage.k8s.io/node-publish-secret-name: "rclone-secret"
+csi.storage.k8s.io/node-publish-secret-namespace: "default"
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+```
+
+## Reclaim Policies
+
+### Delete (Default)
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-delete
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  remotePath: "my-bucket"
+reclaimPolicy: Delete
+csi.storage.k8s.io/node-publish-secret-name: "rclone-secret"
+csi.storage.k8s.io/node-publish-secret-namespace: "default"
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+```
+
+### Retain
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-retain
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  remotePath: "my-bucket"
+reclaimPolicy: Retain
+csi.storage.k8s.io/node-publish-secret-name: "rclone-secret"
+csi.storage.k8s.io/node-publish-secret-namespace: "default"
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+```
+
+## Volume Expansion
+
+Enable volume expansion for PVCs:
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-expandable
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  remotePath: "my-bucket"
+allowVolumeExpansion: true
+csi.storage.k8s.io/node-publish-secret-name: "rclone-secret"
+csi.storage.k8s.io/node-publish-secret-namespace: "default"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+```
+
+## Inline Configuration
+
+Store configuration directly in StorageClass (not recommended for production):
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-inline
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  remotePath: "my-bucket"
+  configData: |
+    [s3]
+    type = s3
+    provider = AWS
+    access_key_id = YOUR_ACCESS_KEY_ID
+    secret_access_key = YOUR_SECRET_ACCESS_KEY
+    region = us-east-1
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+```
+
+## Troubleshooting StorageClass
+
+### Common Issues
+
+1. **Provisioning fails**: Check secret exists and has correct data
+2. **Volume binding fails**: Verify volumeBindingMode and node capabilities
+3. **Mount fails**: Check rclone configuration and network connectivity
+4. **Performance issues**: Adjust VFS cache settings
+
+### Debug Commands
+
+```bash
+# Check StorageClass
+kubectl get storageclass rclone-csi -o yaml
+
+# Check CSIDriver
+kubectl get csidriver rclone.csi.veloxpack.io
+
+# Check PVC events
+kubectl describe pvc my-pvc
+
+# Check driver logs
+kubectl logs -l app=csi-rclone-controller -n kube-system
+kubectl logs -l app=csi-rclone-node -n kube-system
+```
+
+## Best Practices
+
+1. **Use Secrets**: Store credentials in Kubernetes secrets, not inline
+2. **Namespace Isolation**: Use template variables for multi-tenant setups
+3. **Resource Limits**: Set appropriate resource limits for driver pods
+4. **Monitoring**: Monitor driver logs and metrics
+5. **Testing**: Test StorageClass configurations in non-production environments
+6. **Documentation**: Document custom StorageClass configurations

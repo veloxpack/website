@@ -1,0 +1,110 @@
+---
+title: Quick Start
+description: Deploy the CSI driver and mount a volume in minutes.
+---
+
+## Prerequisites
+
+- Kubernetes 1.20+
+- kubectl configured
+- FUSE support on nodes
+
+## 1. Deploy the Driver
+
+```bash
+kubectl apply -k deploy/
+```
+
+This installs:
+- CSI Controller (StatefulSet)
+- CSI Node Driver (DaemonSet)
+- RBAC permissions
+- CSIDriver CRD
+
+## 2. Create Storage Secret
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rclone-secret
+  namespace: default
+type: Opaque
+stringData:
+  remote: "s3"
+  remotePath: "my-bucket"
+  configData: |
+    [s3]
+    type = s3
+    provider = AWS
+    access_key_id = YOUR_ACCESS_KEY_ID
+    secret_access_key = YOUR_SECRET_ACCESS_KEY
+    region = us-east-1
+```
+
+## 3. Create StorageClass
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-csi
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  remotePath: "my-bucket"
+csi.storage.k8s.io/node-publish-secret-name: "rclone-secret"
+csi.storage.k8s.io/node-publish-secret-namespace: "default"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+```
+
+## 4. Create PVC and Pod
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-rclone
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: rclone-csi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-rclone
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    volumeMounts:
+    - name: data
+      mountPath: /data
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: pvc-rclone
+```
+
+## 5. Verify Installation
+
+```bash
+# Check driver pods
+kubectl get pods -n kube-system -l app=csi-rclone-controller
+kubectl get pods -n kube-system -l app=csi-rclone-node
+
+# Check CSIDriver
+kubectl get csidriver rclone.csi.veloxpack.io
+
+# Check PVC status
+kubectl get pvc pvc-rclone
+
+# Test mount
+kubectl exec nginx-rclone -- ls -la /data
+```

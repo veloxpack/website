@@ -1,0 +1,353 @@
+---
+title: Development
+description: Development setup, building, testing, and contributing to the CSI driver.
+---
+
+## Prerequisites
+
+- Go 1.21+
+- Kubernetes 1.20+
+- Docker or compatible container runtime
+- kubectl configured
+- FUSE support (for local testing)
+- [Skaffold](https://skaffold.dev/) (recommended for development)
+
+## Repository Structure
+
+```
+csi-driver-rclone/
+├── cmd/rcloneplugin/          # Main application entry point
+├── pkg/rclone/                # Core driver implementation
+│   ├── server.go              # gRPC server setup
+│   ├── identityserver.go      # CSI Identity service
+│   ├── controllerserver.go    # CSI Controller service
+│   ├── nodeserver.go          # CSI Node service
+│   ├── rclone.go              # Driver initialization
+│   ├── utils.go               # Utility functions
+│   ├── version.go             # Version information
+│   └── mount_options_mapper.go # Mount options parsing
+├── deploy/                    # Kubernetes manifests
+├── charts/                    # Helm charts
+├── test/                      # Test suites
+└── docs/                      # Documentation
+```
+
+## Quick Development with Skaffold
+
+For rapid development, [Skaffold](https://skaffold.dev/) is the recommended approach as it automatically rebuilds and deploys to your local cluster whenever you make changes in code.
+
+```bash
+# Clone repository
+git clone https://github.com/veloxpack/csi-driver-rclone.git
+cd csi-driver-rclone
+
+# Download and tidy dependencies
+go mod tidy
+
+# Start development mode with auto-rebuild and deploy
+skaffold dev
+```
+
+Skaffold will:
+- Watch for code changes
+- Automatically rebuild the container image
+- Deploy to your local Kubernetes cluster
+- Stream logs from all components
+- Clean up resources when you stop (Ctrl+C)
+
+## Building from Source
+
+```bash
+# Clone repository
+git clone https://github.com/veloxpack/csi-driver-rclone.git
+cd csi-driver-rclone
+
+# Download and tidy dependencies
+go mod tidy
+
+# Build binary
+make build
+
+# Build container image
+make container
+
+# (optional) Push to registry
+make push
+```
+
+## Development Workflow
+
+### 1. Local Development
+
+```bash
+# Make code changes
+vim pkg/rclone/nodeserver.go
+
+# Run tests
+make test
+
+# Run linter
+make lint
+
+# Build and test
+make build
+make container
+```
+
+### 2. Testing with csc Tool
+
+Install the CSI test client:
+
+```bash
+go install github.com/rexray/gocsi/csc@latest
+```
+
+Test the driver locally:
+
+```bash
+# Build and run driver locally
+make build
+./bin/rcloneplugin --endpoint unix:///tmp/csi.sock --nodeid CSINode -v=5
+
+# In another terminal, test with csc
+export cap="1,mount,"
+export volname="test-$(date +%s)"
+export volsize="2147483648"
+export endpoint="unix:///tmp/csi.sock"
+export target_path="/tmp/targetpath"
+export params="remote=s3,remotePath=test-bucket,configData=[s3]\ntype = s3\nprovider = Minio\nendpoint = http://localhost:9000\naccess_key_id = minioadmin\nsecret_access_key = minioadmin"
+
+<<<<<<< HEAD
+# Info and lifecycle operations
+=======
+# Test operations
+>>>>>>> 2fcba57 (feat(csi-driver-rclone): add documentation)
+csc identity plugin-info --endpoint "$endpoint"
+csc controller new --endpoint "$endpoint" --cap "$cap" "$volname" --req-bytes "$volsize" --params "$params"
+csc node publish --endpoint "$endpoint" --cap "$cap" --vol-context "$params" --target-path "$target_path" "$volumeid"
+csc node unpublish --endpoint "$endpoint" --target-path "$target_path" "$volumeid"
+csc controller del --endpoint "$endpoint" "$volumeid"
+```
+
+### 3. Deploy to Cluster
+
+```bash
+# Update image references
+export REGISTRY=your-registry.com
+export IMAGE_VERSION=latest
+sed -i "s|image: .*|image: ${REGISTRY}/csi-rclone:${IMAGE_VERSION}|g" deploy/csi-rclone-controller.yaml
+sed -i "s|image: .*|image: ${REGISTRY}/csi-rclone:${IMAGE_VERSION}|g" deploy/csi-rclone-node.yaml
+
+# Deploy to cluster
+kubectl apply -k deploy/
+```
+
+## Testing
+
+### Unit Tests
+
+```bash
+# Run all tests
+go test ./pkg/rclone/...
+
+# Run specific test
+go test ./pkg/rclone -run TestNodePublishVolume
+
+# Run with verbose output
+go test -v ./pkg/rclone/...
+```
+
+### Integration Tests
+
+```bash
+# Run integration tests
+go test ./test/integration/...
+
+# Run e2e tests
+go test ./test/e2e/...
+```
+
+### Linting
+
+```bash
+# Run linter
+./bin/golangci-lint run --config .golangci.yml ./...
+
+# Fix linting issues
+./bin/golangci-lint run --config .golangci.yml --fix ./...
+```
+
+## Debugging
+
+### Debug Commands
+
+```bash
+# Check driver pods
+kubectl get pods -n kube-system -l app=csi-rclone-controller
+kubectl get pods -n kube-system -l app=csi-rclone-node
+
+# Tail logs
+kubectl logs -l app=csi-rclone-controller -f -n kube-system
+kubectl logs -l app=csi-rclone-node -f -n kube-system
+
+# Check CSIDriver
+kubectl get csidriver rclone.csi.veloxpack.io
+
+# Check events
+kubectl get events --sort-by=.metadata.creationTimestamp
+
+# Check mount points
+kubectl exec -n kube-system -l app=csi-rclone-node -- mount | grep rclone
+```
+
+## Architecture Details
+
+### Driver Components
+
+1. **Identity Server**: Implements CSI Identity service
+   - `GetPluginInfo`: Returns driver name and version
+   - `Probe`: Health check endpoint
+   - `GetPluginCapabilities`: Reports supported capabilities
+
+2. **Controller Server**: Implements CSI Controller service
+   - `CreateVolume`: Validates parameters and creates volume context
+   - `DeleteVolume`: No-op (rclone doesn't require cleanup)
+   - `ValidateVolumeCapabilities`: Validates volume capabilities
+
+3. **Node Server**: Implements CSI Node service
+   - `NodePublishVolume`: Mounts rclone filesystem using FUSE
+   - `NodeUnpublishVolume`: Unmounts and cleans up
+   - `NodeGetCapabilities`: Reports node capabilities
+
+### Key Design Decisions
+
+1. **No Staging**: Rclone volumes don't require staging
+2. **Direct Rclone Integration**: Uses rclone's Go library directly
+3. **Remote Creation**: Creates temporary remotes for each mount
+4. **VFS Caching**: Leverages rclone's VFS for improved performance
+5. **Template Variable Support**: Dynamic path substitution using PVC/PV metadata
+
+### Mount Process
+
+1. **Parameter Processing**: Loads secrets, merges with volume context
+2. **Config Parsing**: Parses INI format configData if provided
+3. **Remote Creation**: Creates temporary rclone remote configuration
+4. **Filesystem Initialization**: Initializes rclone filesystem
+5. **Mount Options Parsing**: Converts Kubernetes mount options to rclone options
+6. **FUSE Mount**: Mounts using rclone's FUSE implementation
+
+For a complete list of available mount options, see the [rclone mount documentation](https://rclone.org/commands/rclone_mount/).
+
+## Contributing
+
+### Code Style
+
+- Follow Go conventions
+- Use `golangci-lint` for linting
+- Add tests for new functionality
+- Update documentation
+
+### Pull Request Process
+
+1. Fork the repository
+2. Create a feature branch
+3. Make changes and add tests
+4. Run tests and linter
+5. Submit pull request
+
+### Commit Messages
+
+Use conventional commit format:
+
+```
+feat: add support for new storage backend
+fix: resolve mount option parsing issue
+docs: update installation guide
+test: add integration tests for S3
+```
+
+## Performance Considerations
+
+### VFS Cache Configuration
+
+```yaml
+mountOptions:
+  - vfs-cache-mode=writes          # Cache writes for better performance
+  - vfs-cache-max-size=10G         # Limit cache size
+  - vfs-cache-max-age=1h           # Cache expiration
+  - dir-cache-time=30s             # Directory cache time
+```
+
+### Resource Limits
+
+```yaml
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+```
+
+### Monitoring
+
+Monitor these metrics:
+
+- Driver pod resource usage
+- Mount/unmount operation times
+- VFS cache hit rates
+- Storage backend latency
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Build failures**: Check Go version and dependencies
+2. **Image push failures**: Verify registry credentials
+3. **Driver won't start**: Check FUSE installation and permissions
+4. **Volume mount fails**: Verify rclone configuration and network connectivity
+
+### Debug Commands
+
+```bash
+# Check build logs
+make build 2>&1 | tee build.log
+
+# Check container logs
+docker logs csi-rclone-container
+
+# Check Kubernetes logs
+kubectl logs -l app=csi-rclone-controller --tail=100
+kubectl logs -l app=csi-rclone-node --tail=100
+
+# Check events
+kubectl get events --sort-by=.metadata.creationTimestamp
+```
+
+## Uninstallation
+
+### Remove Development Installation
+
+```bash
+# Delete all resources
+kubectl delete -k deploy/
+
+# Or delete individually
+kubectl delete -f deploy/csi-rclone-driverinfo.yaml
+kubectl delete -f deploy/csi-rclone-node.yaml
+kubectl delete -f deploy/csi-rclone-controller.yaml
+kubectl delete -f deploy/rbac-csi-rclone.yaml
+kubectl delete -f deploy/namespace-csi-rclone.yaml
+```
+
+### Clean Up Local Development
+
+```bash
+# Stop local driver
+pkill -f rcloneplugin
+
+# Clean up test files
+rm -rf /tmp/targetpath
+rm -f /tmp/csi.sock
+```

@@ -1,0 +1,40 @@
+---
+title: CSI Driver Rclone
+description: Kubernetes CSI driver for mounting cloud storage backends using rclone.
+---
+
+## Overview
+
+The Rclone CSI Driver enables Kubernetes to mount 50+ cloud storage backends as persistent volumes using rclone as a Go library. It provides seamless integration between Kubernetes storage and cloud providers without requiring external rclone binaries.
+
+### Key Features
+
+- **50+ Storage Backends**: Amazon S3, Google Cloud Storage, Azure Blob, Dropbox, SFTP, and more
+- **Direct Library Integration**: Uses rclone as a Go library - no external binary required
+- **Dynamic Volume Provisioning**: Create persistent volumes via StorageClass
+- **Template Variable Support**: Dynamic path substitution using PVC/PV metadata
+- **VFS Caching**: High-performance caching with configurable options
+- **No Staging Required**: Direct mount without volume staging
+- **Multi-tenant Support**: Isolated storage paths per namespace/PVC
+
+### Architecture
+
+The driver implements the CSI specification with three main components:
+
+- **Identity Server**: Plugin metadata and health checks
+- **Controller Server**: Volume lifecycle management (create/delete)
+- **Node Server**: Volume mounting/unmounting on nodes
+
+### Supported Kubernetes Versions
+
+| Driver Version | Kubernetes Version | Status |
+|---|---|---|
+| master branch | 1.20+ | GA |
+| v1.0.0 | 1.20+ | GA |
+
+### Requirements
+
+- Kubernetes 1.20 or later
+- CSI node driver registrar
+- FUSE support on nodes (for mounting)
+- **No rclone installation required** - uses rclone as Go library
