@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
-import { z } from "zod"
+import { useState } from "react"
 import { Mail, Phone, MapPin, Send } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -26,27 +26,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
-const contactFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
-  company: z.string().optional(),
-  subject: z.string().min(5, {
-    message: "Subject must be at least 5 characters.",
-  }),
-  message: z.string().min(20, {
-    message: "Message must be at least 20 characters.",
-  }),
-  inquiryType: z.enum(["general", "support", "sales", "partnership"]),
-})
-
-type ContactFormValues = z.infer<typeof contactFormSchema>
+import { contactFormSchema, type ContactFormValues } from "@/lib/schemas/contact"
+import { submitContactForm } from "@/lib/actions/contact"
 
 export default function ContactPage() {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<{
+    type: 'success' | 'error' | null
+    message: string
+  }>({ type: null, message: '' })
+
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
@@ -59,10 +48,27 @@ export default function ContactPage() {
     },
   })
 
-  function onSubmit(data: ContactFormValues) {
-    // Handle form submission here
-    console.log("Form submitted:", data)
-    // You can add API call here
+  async function onSubmit(data: ContactFormValues) {
+    setIsSubmitting(true)
+    setSubmitStatus({ type: null, message: '' })
+
+    try {
+      const result = await submitContactForm(data)
+
+      if (result.success) {
+        setSubmitStatus({ type: 'success', message: result.message || 'Message sent successfully!' })
+        form.reset()
+      } else {
+        setSubmitStatus({ type: 'error', message: result.error || 'An error occurred' })
+      }
+    } catch (error) {
+      setSubmitStatus({
+        type: 'error',
+        message: 'An unexpected error occurred. Please try again.'
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -167,6 +173,16 @@ export default function ContactPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {submitStatus.type && (
+                    <div className={`mb-6 p-4 rounded-md ${
+                      submitStatus.type === 'success'
+                        ? 'bg-green-50 text-green-800 border border-green-200'
+                        : 'bg-red-50 text-red-800 border border-red-200'
+                    }`}>
+                      {submitStatus.message}
+                    </div>
+                  )}
+
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -274,9 +290,9 @@ export default function ContactPage() {
                         )}
                       />
 
-                      <Button type="submit" className="w-full">
+                      <Button type="submit" className="w-full" disabled={isSubmitting}>
                         <Send className="mr-2 h-4 w-4" />
-                        Send Message
+                        {isSubmitting ? 'Sending...' : 'Send Message'}
                       </Button>
                     </form>
                   </Form>
