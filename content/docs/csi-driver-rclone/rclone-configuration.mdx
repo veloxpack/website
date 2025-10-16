@@ -1,0 +1,177 @@
+---
+title: Rclone Configuration
+description: Configure rclone backends using Kubernetes Secrets.
+---
+
+## Overview
+
+The CSI driver supports 50+ storage backends through rclone configuration. Store sensitive credentials in Kubernetes secrets and reference them in StorageClass or PersistentVolume.
+
+## Configuration Methods
+
+### Method 1: Kubernetes Secrets (Recommended)
+
+Store credentials in secrets and reference them in StorageClass:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rclone-secret
+  namespace: default
+type: Opaque
+stringData:
+  remote: "s3"
+  remotePath: "my-bucket"
+  configData: |
+    [s3]
+    type = s3
+    provider = AWS
+    access_key_id = YOUR_ACCESS_KEY_ID
+    secret_access_key = YOUR_SECRET_ACCESS_KEY
+    region = us-east-1
+```
+
+### Method 2: Inline Configuration
+
+Include configuration directly in StorageClass parameters:
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-s3
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  remotePath: "my-bucket"
+  configData: |
+    [s3]
+    type = s3
+    provider = AWS
+    access_key_id = YOUR_ACCESS_KEY_ID
+    secret_access_key = YOUR_SECRET_ACCESS_KEY
+    region = us-east-1
+```
+
+### Method 3: PersistentVolume Configuration
+
+Configure directly in PersistentVolume volumeAttributes:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-rclone
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  csi:
+    driver: rclone.csi.veloxpack.io
+    volumeHandle: rclone-volume
+    volumeAttributes:
+      remote: "s3"
+      remotePath: "my-bucket"
+      configData: |
+        [s3]
+        type = s3
+        provider = AWS
+        access_key_id = YOUR_ACCESS_KEY_ID
+        secret_access_key = YOUR_SECRET_ACCESS_KEY
+        region = us-east-1
+```
+
+**Priority**: volumeAttributes > StorageClass parameters > Secrets
+
+## Dynamic Path Substitution
+
+Use template variables in `remotePath` for multi-tenant isolation:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `${pvc.metadata.name}` | PVC name | `my-pvc-12345` |
+| `${pvc.metadata.namespace}` | PVC namespace | `default` |
+| `${pv.metadata.name}` | PV name | `pv-rclone-abc123` |
+
+Example:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rclone-multitenant-secret
+type: Opaque
+stringData:
+  remote: "s3"
+  remotePath: "buckets/${pvc.metadata.namespace}/${pvc.metadata.name}"
+  configData: |
+    [s3]
+    type = s3
+    provider = AWS
+    access_key_id = YOUR_ACCESS_KEY_ID
+    secret_access_key = YOUR_SECRET_ACCESS_KEY
+    region = us-east-1
+```
+
+## VFS Cache Options
+
+Configure caching for better performance:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-rclone-performance
+spec:
+  mountOptions:
+    - vfs-cache-mode=writes
+    - vfs-cache-max-size=10G
+    - dir-cache-time=30s
+  csi:
+    driver: rclone.csi.veloxpack.io
+    volumeHandle: performance-volume
+    volumeAttributes:
+      remote: "s3"
+      remotePath: "my-bucket"
+      configData: |
+        [s3]
+        type = s3
+        provider = AWS
+        access_key_id = YOUR_ACCESS_KEY_ID
+        secret_access_key = YOUR_SECRET_ACCESS_KEY
+        region = us-east-1
+```
+
+## Security Best Practices
+
+1. **Use Secrets**: Store sensitive credentials in Kubernetes secrets
+2. **RBAC**: Ensure proper RBAC permissions are configured
+3. **Network Policies**: Consider using network policies to restrict access
+4. **Image Security**: Use trusted container images
+5. **Credential Rotation**: Regularly rotate storage backend credentials
+6. **Minimal Permissions**: Grant only necessary permissions to storage backends
+
+## Troubleshooting Configuration
+
+### Common Issues
+
+1. **Authentication failures**: Verify credentials in secrets or configData
+2. **Network connectivity**: Ensure nodes can reach the storage backend
+3. **Permission errors**: Check that credentials have proper access rights
+4. **Configuration format**: Ensure configData is valid INI format
+5. **Resource constraints**: Verify sufficient memory and disk space
+
+### Debug Commands
+
+```bash
+# Check secret contents
+kubectl get secret rclone-secret -o yaml
+
+# Decode secret data
+kubectl get secret rclone-secret -o jsonpath='{.data.configData}' | base64 -d
+
+# Check driver logs
+kubectl logs -l app=csi-rclone-node -n kube-system
+```

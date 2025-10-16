@@ -1,0 +1,9 @@
+{
+    "title": "Core Operator",
+    "description": "The core operator for Veloxpack.",
+    "icon": "Server",
+    "root": true,
+    "pages": [
+        "index"
+    ]
+  }

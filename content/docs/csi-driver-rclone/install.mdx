@@ -1,0 +1,177 @@
+---
+title: Install
+description: Install the CSI driver using Helm or kubectl manifests.
+---
+
+## Prerequisites
+
+- Kubernetes 1.20+
+- kubectl configured
+- Container registry (for custom images)
+
+## Build From Source (optional)
+
+```bash
+git clone https://github.com/veloxpack/csi-driver-rclone.git
+cd csi-driver-rclone
+
+# Build binary and image
+make build
+make container
+
+# (optional) Push to your registry
+make push
+
+# Use your registry and tag when deploying
+export REGISTRY=your-registry.com
+export IMAGE_VERSION=latest
+```
+
+## Install with kubectl (Kustomize dir)
+
+```bash
+# If using a custom image, update image refs first
+sed -i "s|image: .*|image: ${REGISTRY}/csi-rclone:${IMAGE_VERSION}|g" deploy/csi-rclone-controller.yaml
+sed -i "s|image: .*|image: ${REGISTRY}/csi-rclone:${IMAGE_VERSION}|g" deploy/csi-rclone-node.yaml
+
+# Apply controller, node, RBAC, driverinfo, namespace
+kubectl apply -k deploy/
+```
+
+### Install with your own Kustomization
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- namespace-csi-rclone.yaml
+- rbac-csi-rclone.yaml
+- csi-rclone-controller.yaml
+- csi-rclone-node.yaml
+- csi-rclone-driverinfo.yaml
+images:
+- name: csi-rclone
+  newName: your-registry.com/csi-rclone
+  newTag: latest
+```
+
+```bash
+kubectl apply -k .
+```
+
+## Install with Helm
+
+Create a `values.yaml`:
+
+```yaml
+image:
+  repository: your-registry.com/csi-rclone
+  tag: latest
+  pullPolicy: Always
+
+controller:
+  replicas: 2
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+node:
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+```
+
+```bash
+helm install csi-rclone ./charts/latest/csi-driver-rclone -f values.yaml -n kube-system
+```
+
+## Smoke Test Resources
+
+Create the secret, StorageClass, PVC and a test Pod:
+
+```yaml
+# Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rclone-secret
+  namespace: default
+type: Opaque
+stringData:
+  remote: "s3"
+  remotePath: "test-bucket"
+  configData: |
+    [s3]
+    type = s3
+    provider = Minio
+    endpoint = http://minio.minio:9000
+    access_key_id = minioadmin
+    secret_access_key = minioadmin
+---
+# StorageClass
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-csi
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3"
+  remotePath: "test-bucket"
+csi.storage.k8s.io/node-publish-secret-name: "rclone-secret"
+csi.storage.k8s.io/node-publish-secret-namespace: "default"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+---
+# PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: rclone-csi
+---
+# Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+spec:
+  containers:
+  - name: test-container
+    image: nginx
+    volumeMounts:
+    - name: test-volume
+      mountPath: /data
+  volumes:
+  - name: test-volume
+    persistentVolumeClaim:
+      claimName: test-pvc
+```
+
+## Verify
+
+```bash
+kubectl get pods -n kube-system -l app=csi-rclone-controller
+kubectl get pods -n kube-system -l app=csi-rclone-node
+kubectl get csidriver rclone.csi.veloxpack.io
+kubectl get pvc test-pvc
+kubectl get pod test-pod
+kubectl exec test-pod -- mount | grep rclone || true
+kubectl exec test-pod -- ls -la /data || true
+```
+
+

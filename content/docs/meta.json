@@ -1,0 +1,6 @@
+{
+  "pages": [
+    "csi-driver-rclone",
+    "core-operator"
+  ]
+}

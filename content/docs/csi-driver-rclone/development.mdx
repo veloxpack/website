@@ -1,0 +1,155 @@
+---
+title: Development
+description: Local development, linting, and testing.
+---
+
+## Prerequisites
+
+- Kubernetes 1.20+
+- Go toolchain (for building/testing)
+- Docker or a compatible container runtime
+- kubectl configured to your cluster
+
+## Clone and Build
+
+```bash
+git clone https://github.com/veloxpack/csi-driver-rclone.git
+cd csi-driver-rclone
+
+# Build the binary
+make build
+
+# Build a container image
+make container
+
+# Optional: push your image
+make push
+```
+
+## Environment Variables (optional)
+
+```bash
+export REGISTRY=your-registry.com
+export IMAGE_VERSION=latest
+export DRIVER_NAME=rclone.csi.veloxpack.io
+```
+
+## Linting
+
+```bash
+./bin/golangci-lint run --config .golangci.yml ./...
+```
+
+## Unit Tests
+
+```bash
+go test ./pkg/rclone/...
+```
+
+## Run Driver Locally
+
+```bash
+./bin/rcloneplugin --endpoint unix:///tmp/csi.sock --nodeid CSINode -v=5
+```
+
+## Deploy to a Cluster (dev loop)
+
+```bash
+# If you built a custom image, update manifests then deploy
+sed -i "s|image: .*|image: ${REGISTRY}/csi-rclone:${IMAGE_VERSION}|g" deploy/csi-rclone-controller.yaml
+sed -i "s|image: .*|image: ${REGISTRY}/csi-rclone:${IMAGE_VERSION}|g" deploy/csi-rclone-node.yaml
+
+kubectl apply -k deploy/
+```
+
+## CSI Test Client (csc)
+
+Install the CSI test client:
+
+```bash
+go install github.com/rexray/gocsi/csc@latest
+```
+
+Example usage against a locally running driver:
+
+```bash
+export cap="1,mount,"
+export volname="test-$(date +%s)"
+export volsize="2147483648"
+export endpoint="unix:///tmp/csi.sock"
+export target_path="/tmp/targetpath"
+export params="remote=s3,remotePath=test-bucket,configData=[s3]\ntype = s3\nprovider = Minio\nendpoint = http://localhost:9000\naccess_key_id = minioadmin\nsecret_access_key = minioadmin"
+
+# Info and lifecycle operations
+csc identity plugin-info --endpoint "$endpoint"
+csc controller new --endpoint "$endpoint" --cap "$cap" "$volname" --req-bytes "$volsize" --params "$params"
+csc node publish --endpoint "$endpoint" --cap "$cap" --vol-context "$params" --target-path "$target_path" "$volumeid"
+csc node unpublish --endpoint "$endpoint" --target-path "$target_path" "$volumeid"
+csc controller del --endpoint "$endpoint" "$volumeid"
+```
+
+## Debug Logging
+
+Enable verbose logs in the Kubernetes deployments:
+
+```yaml
+# Controller
+args:
+  - "--v=5"
+  - "--logtostderr=true"
+  - "--stderrthreshold=INFO"
+
+# Node
+args:
+  - "--v=5"
+  - "--logtostderr=true"
+  - "--stderrthreshold=INFO"
+```
+
+## Resource Limits (example)
+
+```yaml
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+```
+
+## Development Workflow
+
+```bash
+# Make your code changes
+vim pkg/rclone/nodeserver.go
+
+# Run tests and lints
+make test
+make lint
+
+# Build and deploy
+make build
+make container
+kubectl apply -k deploy/
+```
+
+## Useful Debug Commands
+
+```bash
+# Check driver pods
+kubectl get pods -l app=csi-rclone-controller -n kube-system
+kubectl get pods -l app=csi-rclone-node -n kube-system
+
+# Tail logs
+kubectl logs -l app=csi-rclone-controller -f -n kube-system
+kubectl logs -l app=csi-rclone-node -f -n kube-system
+
+# Inspect CSIDriver
+kubectl get csidriver rclone.csi.veloxpack.io
+
+# Cluster events
+kubectl get events --sort-by=.metadata.creationTimestamp
+```
+
+

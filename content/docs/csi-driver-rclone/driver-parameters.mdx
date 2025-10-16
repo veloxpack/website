@@ -1,0 +1,23 @@
+---
+title: Driver Parameters
+description: Parameters for rclone.csi.veloxpack.io
+---
+
+### Dynamic Path Substitution
+
+| Variable | Description |
+|---|---|
+| `${pvc.metadata.name}` | PVC name |
+| `${pvc.metadata.namespace}` | PVC namespace |
+| `${pv.metadata.name}` | PV name |
+
+Example:
+
+```yaml
+parameters:
+  remote: "s3"
+  remotePath: "my-bucket/${pvc.metadata.namespace}/${pvc.metadata.name}"
+```
+
+
+
