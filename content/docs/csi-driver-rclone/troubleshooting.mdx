@@ -1,31 +1,384 @@
 ---
 title: Troubleshooting
-description: Debugging steps and common issues.
+description: Common issues, debugging steps, and solutions for the CSI driver.
 ---
+
+## Overview
+
+This guide covers common issues, debugging techniques, and solutions for the rclone CSI driver.
 
 ## Check Driver Status
 
+### Verify Driver Pods
+
 ```bash
+# Check controller pods
 kubectl get pods -n kube-system -l app=csi-rclone-controller
+
+# Check node pods
 kubectl get pods -n kube-system -l app=csi-rclone-node
-kubectl logs -n kube-system -l app=csi-rclone-controller
-kubectl logs -n kube-system -l app=csi-rclone-node
+
+# Check pod status
+kubectl describe pod -n kube-system -l app=csi-rclone-controller
+kubectl describe pod -n kube-system -l app=csi-rclone-node
 ```
 
-## Verify Driver Functionality
+### Check CSIDriver Resource
 
 ```bash
+# Check CSIDriver
+kubectl get csidriver rclone.csi.veloxpack.io
+
+# Get detailed information
+kubectl describe csidriver rclone.csi.veloxpack.io
+```
+
+### Verify Driver Functionality
+
+```bash
+# Check if the driver is working correctly
 kubectl exec -n kube-system -l app=csi-rclone-node -- /rcloneplugin --help
+
+# Check driver version information
 kubectl logs -n kube-system -l app=csi-rclone-node --tail=10 | grep "DRIVER INFORMATION" -A 10
 ```
 
 ## Common Issues
 
-1. Authentication failures: verify credentials
-2. Network connectivity to storage backend
-3. Permission errors for credentials
-4. Config format must be valid INI
-5. Memory/disk resource constraints
+### 1. Driver Pods Not Starting
 
+**Symptoms:**
+- Pods stuck in `Pending` or `CrashLoopBackOff`
+- Driver not responding to CSI calls
 
+**Causes:**
+- FUSE not installed on nodes
+- Insufficient permissions
+- Resource constraints
+- Image pull issues
 
+**Solutions:**
+
+```bash
+# Check node capabilities
+kubectl describe node <node-name>
+
+# Check if FUSE is available
+kubectl exec -n kube-system -l app=csi-rclone-node -- ls /dev/fuse
+
+# Check resource limits
+kubectl describe pod -n kube-system -l app=csi-rclone-controller
+
+# Check image pull
+kubectl describe pod -n kube-system -l app=csi-rclone-controller | grep -i image
+```
+
+### 2. Volume Mount Failures
+
+**Symptoms:**
+- PVC stuck in `Pending`
+- Mount operations failing
+- Pods can't access mounted volumes
+
+**Causes:**
+- Invalid rclone configuration
+- Network connectivity issues
+- Authentication failures
+- Permission errors
+
+**Solutions:**
+
+```bash
+# Check PVC events
+kubectl describe pvc <pvc-name>
+
+# Check pod events
+kubectl describe pod <pod-name>
+
+# Check driver logs
+kubectl logs -n kube-system -l app=csi-rclone-node --tail=100
+
+# Verify secret contents
+kubectl get secret <secret-name> -o yaml
+kubectl get secret <secret-name> -o jsonpath='{.data.configData}' | base64 -d
+```
+
+### 3. Authentication Failures
+
+**Symptoms:**
+- Mount operations fail with authentication errors
+- Driver logs show credential issues
+
+**Causes:**
+- Invalid credentials in secrets
+- Expired tokens
+- Incorrect configuration format
+
+**Solutions:**
+
+```bash
+# Check secret data
+kubectl get secret rclone-secret -o jsonpath='{.data.configData}' | base64 -d
+
+# Verify credentials manually
+kubectl exec -n kube-system -l app=csi-rclone-node -- /rcloneplugin --help
+
+# Test configuration
+kubectl exec -n kube-system -l app=csi-rclone-node -- sh -c 'echo "[s3]
+type = s3
+provider = AWS
+access_key_id = YOUR_KEY
+secret_access_key = YOUR_SECRET
+region = us-east-1" > /tmp/test.conf && rclone lsd s3:test-bucket --config /tmp/test.conf'
+```
+
+### 4. Performance Issues
+
+**Symptoms:**
+- Slow file operations
+- High memory usage
+- Timeout errors
+
+**Causes:**
+- Inadequate VFS cache configuration
+- Network latency
+- Resource constraints
+
+**Solutions:**
+
+```bash
+# Check VFS cache settings
+kubectl describe pv <pv-name> | grep -i mount
+
+# Monitor resource usage
+kubectl top pods -n kube-system -l app=csi-rclone-node
+
+# Adjust cache settings
+# Add to StorageClass mountOptions:
+# - vfs-cache-mode=writes
+# - vfs-cache-max-size=10G
+# - dir-cache-time=30s
+```
+
+### 5. Network Connectivity Issues
+
+**Symptoms:**
+- Timeout errors
+- Connection refused
+- Slow operations
+
+**Causes:**
+- Network policies blocking access
+- DNS resolution issues
+- Firewall rules
+
+**Solutions:**
+
+```bash
+# Test connectivity from driver pod
+kubectl exec -n kube-system -l app=csi-rclone-node -- nslookup s3.amazonaws.com
+
+# Check network policies
+kubectl get networkpolicies
+
+# Test from node
+kubectl debug node/<node-name> -it --image=busybox -- nslookup s3.amazonaws.com
+```
+
+## Debug Commands
+
+### Check Driver Logs
+
+```bash
+# Controller logs
+kubectl logs -n kube-system -l app=csi-rclone-controller --tail=100
+
+# Node logs
+kubectl logs -n kube-system -l app=csi-rclone-node --tail=100
+
+# Follow logs
+kubectl logs -n kube-system -l app=csi-rclone-node -f
+
+# Previous container logs
+kubectl logs -n kube-system -l app=csi-rclone-node --previous
+```
+
+### Check Mount Points
+
+```bash
+# List mount points
+kubectl exec -n kube-system -l app=csi-rclone-node -- mount | grep rclone
+
+# Check mount options
+kubectl exec -n kube-system -l app=csi-rclone-node -- cat /proc/mounts | grep rclone
+
+# Check FUSE mounts
+kubectl exec -n kube-system -l app=csi-rclone-node -- ls -la /dev/fuse
+```
+
+### Check Volume Status
+
+```bash
+# Check PVC status
+kubectl get pvc <pvc-name> -o yaml
+
+# Check PV status
+kubectl get pv <pv-name> -o yaml
+
+# Check pod volume mounts
+kubectl describe pod <pod-name> | grep -A 10 "Volumes:"
+```
+
+### Check Events
+
+```bash
+# All events
+kubectl get events --sort-by=.metadata.creationTimestamp
+
+# Events for specific resource
+kubectl get events --field-selector involvedObject.name=<resource-name>
+
+# Recent events
+kubectl get events --sort-by=.metadata.creationTimestamp --field-selector type=Warning
+```
+
+## Enable Debug Logging
+
+### Driver Logging
+
+```yaml
+# In controller deployment
+args:
+  - "--v=5"
+  - "--logtostderr=true"
+  - "--stderrthreshold=INFO"
+
+# In node deployment
+args:
+  - "--v=5"
+  - "--logtostderr=true"
+  - "--stderrthreshold=INFO"
+```
+
+### FUSE Debugging
+
+```yaml
+# Add to StorageClass mountOptions
+mountOptions:
+  - debug-fuse
+  - v=5
+```
+
+## Performance Tuning
+
+### VFS Cache Configuration
+
+```yaml
+# High performance configuration
+mountOptions:
+  - vfs-cache-mode=full
+  - vfs-cache-max-size=50G
+  - vfs-cache-max-age=24h
+  - dir-cache-time=5m
+  - vfs-read-ahead=1M
+```
+
+### Resource Limits
+
+```yaml
+# Controller resources
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+# Node resources
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "200m"
+  limits:
+    memory: "2Gi"
+    cpu: "2000m"
+```
+
+## Monitoring
+
+### Key Metrics to Monitor
+
+1. **Driver Health**
+   - Pod status and restarts
+   - Memory and CPU usage
+   - Log error rates
+
+2. **Volume Operations**
+   - Mount/unmount success rates
+   - Operation latency
+   - Error rates
+
+3. **Storage Backend**
+   - API call latency
+   - Error rates
+   - Throughput
+
+### Prometheus Metrics
+
+```yaml
+# Add to driver deployment
+args:
+  - "--metrics-address=:8080"
+  - "--metrics-path=/metrics"
+```
+
+## Recovery Procedures
+
+### Restart Driver Pods
+
+```bash
+# Restart controller
+kubectl rollout restart deployment/csi-rclone-controller -n kube-system
+
+# Restart node daemonset
+kubectl rollout restart daemonset/csi-rclone-node -n kube-system
+```
+
+### Clean Up Corrupted Mounts
+
+```bash
+# Force unmount on specific node
+kubectl exec -n kube-system -l app=csi-rclone-node -- umount -f /var/lib/kubelet/pods/*/volumes/kubernetes.io~csi/*/mount
+
+# Restart node daemonset
+kubectl rollout restart daemonset/csi-rclone-node -n kube-system
+```
+
+### Reset Driver State
+
+```bash
+# Delete CSIDriver resource
+kubectl delete csidriver rclone.csi.veloxpack.io
+
+# Recreate
+kubectl apply -f deploy/csi-rclone-driverinfo.yaml
+```
+
+## Getting Help
+
+### Log Collection
+
+```bash
+# Collect logs for debugging
+kubectl logs -n kube-system -l app=csi-rclone-controller > controller.log
+kubectl logs -n kube-system -l app=csi-rclone-node > node.log
+kubectl get events --sort-by=.metadata.creationTimestamp > events.log
+```
+
+### Support Resources
+
+- [GitHub Issues](https://github.com/veloxpack/csi-driver-rclone/issues)
+- [GitHub Discussions](https://github.com/veloxpack/csi-driver-rclone/discussions)
+- [Rclone Documentation](https://rclone.org/)
+- [CSI Specification](https://github.com/container-storage-interface/spec)

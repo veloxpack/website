@@ -1,6 +1,6 @@
 ---
 title: Rclone Configuration
-description: Configure rclone backends using Kubernetes Secrets.
+description: Configure rclone backends using Kubernetes Secrets and parameters.
 ---
 
 ## Overview
@@ -117,7 +117,7 @@ stringData:
 
 ## VFS Cache Options
 
-Configure caching for better performance:
+Configure caching for better performance using `mountOptions`:
 
 ```yaml
 apiVersion: v1
@@ -143,6 +143,40 @@ spec:
         secret_access_key = YOUR_SECRET_ACCESS_KEY
         region = us-east-1
 ```
+
+## Supported Backends
+
+The driver supports all rclone backends, including:
+
+- **Amazon S3** and S3-compatible storage (MinIO, DigitalOcean Spaces, etc.)
+- **Google Cloud Storage**
+- **Azure Blob Storage**
+- **Dropbox**
+- **SFTP/SSH**
+- **Google Drive**
+- **OneDrive**
+- **Box**
+- **Backblaze B2**
+- **WebDAV**
+- **FTP**
+- **And 50+ more backends**
+
+## Parameter Processing
+
+The driver processes parameters in this order:
+
+1. **Secrets**: Loaded as defaults from `csi.storage.k8s.io/node-publish-secret-name`
+2. **Volume Context**: Overrides secrets (from StorageClass parameters or PV volumeAttributes)
+3. **ConfigData**: Parsed INI format and merged with other parameters
+4. **Parameter Sanitization**: Remote prefixes removed, hyphens converted to underscores
+
+### Parameter Sanitization
+
+Parameters are sanitized for consistency:
+
+- `s3-endpoint` → `endpoint` (when remote is "s3")
+- `--cache-mode` → `cache_mode`
+- `EndPoint` → `endpoint`
 
 ## Security Best Practices
 
@@ -174,4 +208,7 @@ kubectl get secret rclone-secret -o jsonpath='{.data.configData}' | base64 -d
 
 # Check driver logs
 kubectl logs -l app=csi-rclone-node -n kube-system
+
+# Check mount options
+kubectl describe pv pv-rclone
 ```

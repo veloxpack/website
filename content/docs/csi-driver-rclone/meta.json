@@ -8,7 +8,7 @@
     "install",
     "quick-start",
     "development",
-    "rclone",
+    "rclone-configuration",
     "storageclass",
     "driver-parameters",
     "examples",

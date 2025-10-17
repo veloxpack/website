@@ -9,7 +9,7 @@ import { notFound } from 'next/navigation';
 import { getMDXComponents } from '@/mdx-components';
 import type { Metadata } from 'next';
 import { createRelativeLink } from 'fumadocs-ui/mdx';
-import { Feedback } from '@/components/feedback';
+import { Feedback } from '@/components/Feedback';
 import { onRateAction } from '@/lib/github';
 
 export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {

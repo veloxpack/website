@@ -9,7 +9,7 @@ description: Install the CSI driver using Helm or kubectl manifests.
 - kubectl configured
 - Container registry (for custom images)
 
-## Build From Source (optional)
+## Build From Source (Optional)
 
 ```bash
 git clone https://github.com/veloxpack/csi-driver-rclone.git
@@ -27,7 +27,7 @@ export REGISTRY=your-registry.com
 export IMAGE_VERSION=latest
 ```
 
-## Install with kubectl (Kustomize dir)
+## Install with kubectl (Kustomize)
 
 ```bash
 # If using a custom image, update image refs first
@@ -38,7 +38,7 @@ sed -i "s|image: .*|image: ${REGISTRY}/csi-rclone:${IMAGE_VERSION}|g" deploy/csi
 kubectl apply -k deploy/
 ```
 
-### Install with your own Kustomization
+### Custom Kustomization
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -93,85 +93,90 @@ node:
 helm install csi-rclone ./charts/latest/csi-driver-rclone -f values.yaml -n kube-system
 ```
 
-## Smoke Test Resources
-
-Create the secret, StorageClass, PVC and a test Pod:
-
-```yaml
-# Secret
-apiVersion: v1
-kind: Secret
-metadata:
-  name: rclone-secret
-  namespace: default
-type: Opaque
-stringData:
-  remote: "s3"
-  remotePath: "test-bucket"
-  configData: |
-    [s3]
-    type = s3
-    provider = Minio
-    endpoint = http://minio.minio:9000
-    access_key_id = minioadmin
-    secret_access_key = minioadmin
----
-# StorageClass
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: rclone-csi
-provisioner: rclone.csi.veloxpack.io
-parameters:
-  remote: "s3"
-  remotePath: "test-bucket"
-csi.storage.k8s.io/node-publish-secret-name: "rclone-secret"
-csi.storage.k8s.io/node-publish-secret-namespace: "default"
-reclaimPolicy: Delete
-volumeBindingMode: Immediate
-allowVolumeExpansion: true
----
-# PVC
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: test-pvc
-spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 10Gi
-  storageClassName: rclone-csi
----
-# Pod
-apiVersion: v1
-kind: Pod
-metadata:
-  name: test-pod
-spec:
-  containers:
-  - name: test-container
-    image: nginx
-    volumeMounts:
-    - name: test-volume
-      mountPath: /data
-  volumes:
-  - name: test-volume
-    persistentVolumeClaim:
-      claimName: test-pvc
-```
-
-## Verify
+## Verify Installation
 
 ```bash
+# Check driver pods
 kubectl get pods -n kube-system -l app=csi-rclone-controller
 kubectl get pods -n kube-system -l app=csi-rclone-node
+
+# Check CSIDriver
 kubectl get csidriver rclone.csi.veloxpack.io
-kubectl get pvc test-pvc
-kubectl get pod test-pod
-kubectl exec test-pod -- mount | grep rclone || true
-kubectl exec test-pod -- ls -la /data || true
+
+# Check driver logs
+kubectl logs -n kube-system -l app=csi-rclone-controller
+kubectl logs -n kube-system -l app=csi-rclone-node
 ```
 
+## Driver Configuration
 
+The driver supports various configuration options via command-line flags:
+
+### Mount Options
+
+- `--allow-non-empty`: Allow mounting over non-empty directories
+- `--allow-other`: Allow access to other users
+- `--async-read`: Use asynchronous reads
+- `--debug-fuse`: Debug FUSE internals
+- `--direct-io`: Use Direct IO (disables caching)
+
+### VFS Options
+
+- `--vfs-cache-mode`: Cache mode (off|minimal|writes|full)
+- `--vfs-cache-max-size`: Maximum cache size
+- `--vfs-cache-max-age`: Max time since last access
+- `--dir-cache-time`: Directory cache time
+- `--read-only`: Read-only access
+
+### Default Parameters
+
+The driver sets these defaults:
+
+```yaml
+cache-info-age: "24h"
+cache-chunk-clean-interval: "5m"
+cache-dir: "/tmp/rclone-vfs-cache/"
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Driver won't start**: Check FUSE installation and permissions
+2. **Mount fails**: Verify rclone configuration and network connectivity
+3. **Performance issues**: Adjust VFS cache settings
+4. **Permission errors**: Check node permissions and FUSE setup
+
+### Debug Commands
+
+```bash
+# Check driver status
+kubectl get pods -n kube-system -l app=csi-rclone-controller
+kubectl get pods -n kube-system -l app=csi-rclone-node
+
+# Check driver logs
+kubectl logs -n kube-system -l app=csi-rclone-controller --tail=100
+kubectl logs -n kube-system -l app=csi-rclone-node --tail=100
+
+# Check CSIDriver
+kubectl get csidriver rclone.csi.veloxpack.io -o yaml
+
+# Check events
+kubectl get events --sort-by=.metadata.creationTimestamp
+```
+
+### Enable Debug Logging
+
+```yaml
+# In controller deployment
+args:
+  - "--v=5"
+  - "--logtostderr=true"
+  - "--stderrthreshold=INFO"
+
+# In node deployment
+args:
+  - "--v=5"
+  - "--logtostderr=true"
+  - "--stderrthreshold=INFO"
+```

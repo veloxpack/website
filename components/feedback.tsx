@@ -46,7 +46,19 @@ export function Feedback({
   const [opinion, setOpinion] = useState<'good' | 'bad' | null>(null);
   const [message, setMessage] = useState('');
   const [isPending, startTransition] = useTransition();
-  const [, , repo] = useMemo(() => url.split("/"), [url]);
+
+  const repo = useMemo(() => {
+    const urlSegments = url.split("/");
+    const repoIndex = 2; // Third element (0-indexed)
+
+    // Validate that the URL has enough segments
+    if (urlSegments.length <= repoIndex) {
+      console.warn(`Invalid URL format: expected at least ${repoIndex + 1} segments, got ${urlSegments.length}`);
+      return "";
+    }
+
+    return urlSegments[repoIndex];
+  }, [url]);
 
   useEffect(() => {
     const item = localStorage.getItem(`docs-feedback-${url}`);

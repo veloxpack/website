@@ -1,5 +1,5 @@
 import { App, Octokit } from 'octokit';
-import type { ActionResponse, Feedback } from '@/components/feedback';
+import type { ActionResponse, Feedback } from '@/components/Feedback';
 
 export const rcloneRepo = 'csi-driver-rclone';
 export const coreOperatorRepo = 'core-operator';

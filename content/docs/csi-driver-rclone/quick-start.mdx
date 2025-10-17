@@ -1,17 +1,27 @@
 ---
 title: Quick Start
-description: Deploy the CSI driver and mount a volume quickly.
+description: Deploy the CSI driver and mount a volume in minutes.
 ---
 
-## 1. Deploy the CSI Driver
+## Prerequisites
+
+- Kubernetes 1.20+
+- kubectl configured
+- FUSE support on nodes
+
+## 1. Deploy the Driver
 
 ```bash
 kubectl apply -k deploy/
 ```
 
-This installs the controller, node driver, RBAC, CSIDriver, and an example StorageClass.
+This installs:
+- CSI Controller (StatefulSet)
+- CSI Node Driver (DaemonSet)
+- RBAC permissions
+- CSIDriver CRD
 
-## 2. Configure Storage Backend
+## 2. Create Storage Secret
 
 ```yaml
 apiVersion: v1
@@ -82,5 +92,19 @@ spec:
       claimName: pvc-rclone
 ```
 
+## 5. Verify Installation
 
+```bash
+# Check driver pods
+kubectl get pods -n kube-system -l app=csi-rclone-controller
+kubectl get pods -n kube-system -l app=csi-rclone-node
 
+# Check CSIDriver
+kubectl get csidriver rclone.csi.veloxpack.io
+
+# Check PVC status
+kubectl get pvc pvc-rclone
+
+# Test mount
+kubectl exec nginx-rclone -- ls -la /data
+```
