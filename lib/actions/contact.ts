@@ -2,9 +2,9 @@
 
 import { ContactEmail } from '@/emails/contact';
 import { contactFormSchema } from '@/lib/schemas/contact';
-import { z } from 'zod';
+import { contactEmails } from '@/lib/constants';
 import { resend } from '@/lib/resend';
-
+import { z } from 'zod';
 
 export async function submitContactForm(data: z.infer<typeof contactFormSchema>) {
   try {
@@ -13,8 +13,8 @@ export async function submitContactForm(data: z.infer<typeof contactFormSchema>)
 
     // Send email using Resend
     const { error } = await resend.emails.send({
-      from: 'Veloxpack Contact <noreply@veloxpack.io>',
-      to: ['hello@veloxpack.io'],
+      from: process.env.CONTACT_FORM_SENDER_EMAIL || 'Veloxpack Contact <noreply@veloxpack.io>',
+      to: contactEmails ?? [],
       replyTo: validatedData.email,
       subject: `Contact Form: ${validatedData.subject}`,
       react: ContactEmail({
