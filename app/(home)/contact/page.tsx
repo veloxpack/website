@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { useState } from "react"
 import { Mail, Phone, MapPin, Send } from "lucide-react"
+import { motion } from "framer-motion"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -76,13 +77,23 @@ export default function ContactPage() {
       {/* Hero Section */}
       <section className="py-20 px-6 sm:px-8 lg:px-12">
         <div className="mx-auto max-w-4xl text-center space-y-6">
-          <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+          <motion.h1 
+            className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
             Get in Touch
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          </motion.h1>
+          <motion.p 
+            className="text-lg text-muted-foreground max-w-2xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
             Have questions about Veloxpack? We'd love to hear from you.
             Send us a message and we'll respond as soon as possible.
-          </p>
+          </motion.p>
         </div>
       </section>
 
@@ -91,9 +102,21 @@ export default function ContactPage() {
       {/* Contact Content */}
       <section className="py-20 px-6 sm:px-8 lg:px-12">
         <div className="mx-auto max-w-6xl">
-          <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
+          <motion.div 
+            className="grid grid-cols-1 gap-12 lg:grid-cols-2"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
             {/* Contact Information */}
-            <div className="space-y-8">
+            <motion.div 
+              className="space-y-8"
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+            >
               <div>
                 <h2 className="text-2xl font-bold text-foreground mb-4">
                   Contact Information
@@ -105,66 +128,95 @@ export default function ContactPage() {
               </div>
 
               <div className="space-y-6">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <Mail className="h-5 w-5 text-primary" />
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  viewport={{ once: true }}
+                  whileHover={{ y: -2 }}
+                >
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                          <Mail className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-foreground">Email</h3>
+                          <p className="text-sm text-muted-foreground">
+                            hello@veloxpack.io
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            support@veloxpack.io
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground">Email</h3>
-                        <p className="text-sm text-muted-foreground">
-                          hello@veloxpack.io
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          support@veloxpack.io
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </motion.div>
 
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <Phone className="h-5 w-5 text-primary" />
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  viewport={{ once: true }}
+                  whileHover={{ y: -2 }}
+                >
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                          <Phone className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-foreground">Phone</h3>
+                          <p className="text-sm text-muted-foreground">
+                            +48 576 168 430
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Mon-Fri 9AM-6PM CET
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground">Phone</h3>
-                        <p className="text-sm text-muted-foreground">
-                          +48 576 168 430
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Mon-Fri 9AM-6PM CET
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </motion.div>
 
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <MapPin className="h-5 w-5 text-primary" />
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  viewport={{ once: true }}
+                  whileHover={{ y: -2 }}
+                >
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                          <MapPin className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-foreground">Office</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Ul. Czyżówka 16 /151<br />
+                            Kraków 30-526<br />
+                            POLAND
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground">Office</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Ul. Czyżówka 16 /151<br />
-                          Kraków 30-526<br />
-                          POLAND
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Contact Form */}
-            <div>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              viewport={{ once: true }}
+            >
               <Card>
                 <CardHeader>
                   <CardTitle>Send us a message</CardTitle>
@@ -185,7 +237,13 @@ export default function ContactPage() {
 
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <motion.div 
+                        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.1 }}
+                        viewport={{ once: true }}
+                      >
                         <FormField
                           control={form.control}
                           name="name"
@@ -212,94 +270,129 @@ export default function ContactPage() {
                             </FormItem>
                           )}
                         />
-                      </div>
+                      </motion.div>
 
-                      <FormField
-                        control={form.control}
-                        name="company"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Company</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Acme Inc." {...field} />
-                            </FormControl>
-                            <FormDescription>
-                              Optional - helps us understand your use case
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="inquiryType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Inquiry Type *</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl className="w-full">
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select inquiry type" />
-                                </SelectTrigger>
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                        viewport={{ once: true }}
+                      >
+                        <FormField
+                          control={form.control}
+                          name="company"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Company</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Acme Inc." {...field} />
                               </FormControl>
-                              <SelectContent>
-                                <SelectItem value="general">General Inquiry</SelectItem>
-                                <SelectItem value="support">Technical Support</SelectItem>
-                                <SelectItem value="sales">Sales Question</SelectItem>
-                                <SelectItem value="partnership">Partnership</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                              <FormDescription>
+                                Optional - helps us understand your use case
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </motion.div>
 
-                      <FormField
-                        control={form.control}
-                        name="subject"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Subject *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="How can we help you?" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
+                        viewport={{ once: true }}
+                      >
+                        <FormField
+                          control={form.control}
+                          name="inquiryType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Inquiry Type *</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl className="w-full">
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select inquiry type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="general">General Inquiry</SelectItem>
+                                  <SelectItem value="support">Technical Support</SelectItem>
+                                  <SelectItem value="sales">Sales Question</SelectItem>
+                                  <SelectItem value="partnership">Partnership</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </motion.div>
 
-                      <FormField
-                        control={form.control}
-                        name="message"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Message *</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="Tell us more about your inquiry..."
-                                className="min-h-[120px]"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Please provide as much detail as possible
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.4 }}
+                        viewport={{ once: true }}
+                      >
+                        <FormField
+                          control={form.control}
+                          name="subject"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Subject *</FormLabel>
+                              <FormControl>
+                                <Input placeholder="How can we help you?" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </motion.div>
 
-                      <Button type="submit" className="w-full" disabled={isSubmitting}>
-                        <Send className="mr-2 h-4 w-4" />
-                        {isSubmitting ? 'Sending...' : 'Send Message'}
-                      </Button>
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.5 }}
+                        viewport={{ once: true }}
+                      >
+                        <FormField
+                          control={form.control}
+                          name="message"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Message *</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Tell us more about your inquiry..."
+                                  className="min-h-[120px]"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Please provide as much detail as possible
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.6 }}
+                        viewport={{ once: true }}
+                      >
+                        <Button type="submit" className="w-full" disabled={isSubmitting}>
+                          <Send className="mr-2 h-4 w-4" />
+                          {isSubmitting ? 'Sending...' : 'Send Message'}
+                        </Button>
+                      </motion.div>
                     </form>
                   </Form>
                 </CardContent>
               </Card>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
     </div>
