@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import ContactPageClient from "@/components/home/ContactPageClient"
+import ContactPageClient from "@/components/home/ContactPage"
 
 export const metadata: Metadata = {
   title: "Contact Veloxpack",

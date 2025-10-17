@@ -1,4 +1,5 @@
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
+import Image from 'next/image';
 
 /**
  * Shared layout configurations
@@ -11,17 +12,10 @@ export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
       title: (
-        <>
-          <svg
-            width="24"
-            height="24"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-label="Logo"
-          >
-            <circle cx={12} cy={12} r={12} fill="currentColor" />
-          </svg>
-          Veloxpack
-        </>
+        <div className="flex flex-row items-center gap-2">
+          <Image src="/logo.png" alt='logo' width={30} height={30} className="rounded-full" />
+          <span className='font-bold tracking-tight text-foreground'> Veloxpack</span>
+        </div>
       ),
     },
     // see https://fumadocs.dev/docs/ui/navigation/links

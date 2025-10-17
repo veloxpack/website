@@ -1,4 +1,4 @@
-import HomePageClient from '@/components/home/HomePageClient';
+import HomePageClient from '@/components/home/HomePage';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
