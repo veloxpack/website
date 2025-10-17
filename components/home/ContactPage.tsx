@@ -63,6 +63,8 @@ export default function ContactPageClient() {
         setSubmitStatus({ type: 'error', message: result.error || 'An error occurred' })
       }
     } catch (error) {
+      console.error(error);
+
       setSubmitStatus({
         type: 'error',
         message: 'An unexpected error occurred. Please try again.'
@@ -91,8 +93,8 @@ export default function ContactPageClient() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            Have questions about Veloxpack? We'd love to hear from you.
-            Send us a message and we'll respond as soon as possible.
+            Have questions about Veloxpack? We&apos;d love to hear from you.
+            Send us a message and we&apos;ll respond as soon as possible.
           </motion.p>
         </div>
       </section>
@@ -123,7 +125,7 @@ export default function ContactPageClient() {
                 </h2>
                 <p className="text-muted-foreground">
                   Reach out to us through any of the channels below, or fill out the form
-                  and we'll get back to you within 24 hours.
+                  and we&apos;ll get back to you within 24 hours.
                 </p>
               </div>
 
@@ -221,7 +223,7 @@ export default function ContactPageClient() {
                 <CardHeader>
                   <CardTitle>Send us a message</CardTitle>
                   <CardDescription>
-                    Fill out the form below and we'll get back to you as soon as possible.
+                    Fill out the form below and we&apos;ll get back to you as soon as possible.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

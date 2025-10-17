@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Github, Heart, Code, Mail } from 'lucide-react';
+import { Code, Twitter, Linkedin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -12,38 +12,48 @@ export function HomeFooter() {
       {/* Footer */}
       <footer className="py-12 px-6 sm:px-8 lg:px-12 bg-muted/30">
         <div className="mx-auto max-w-6xl">
-          <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
-            <div className="flex flex-col items-center gap-2 sm:items-start">
-              <div className="flex items-center gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            {/* Company Info */}
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-2 mb-4">
                 <h3 className="text-lg font-semibold text-foreground">Veloxpack</h3>
                 <Badge variant="secondary" className="text-xs">
                   Open Source
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground text-center sm:text-left">
+              <p className="text-sm text-muted-foreground">
                 Kubernetes-native media processing platform
               </p>
             </div>
 
-            <div className="flex items-center gap-6">
-              <Button asChild variant="ghost" size="sm">
-                <Link href="https://github.com/veloxpack" className="flex items-center gap-2">
-                  <Github className="h-4 w-4" />
-                  GitHub
-                </Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/docs" className="flex items-center gap-2">
-                  <Code className="h-4 w-4" />
-                  Docs
-                </Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/contact" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Contact
-                </Link>
-              </Button>
+            {/* Resources Section */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-4">Resources</h4>
+              <div className="space-y-2">
+                <Button asChild variant="ghost" size="sm" className="justify-start p-0 h-auto">
+                  <Link href="/docs" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                    <Code className="h-4 w-4" />
+                    Docs
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            {/* Social Section */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-4">Social</h4>
+              <div className="flex items-center gap-4">
+                <Button asChild variant="ghost" size="sm" className="p-2">
+                  <Link href="https://x.com/veloxpack" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                    <Twitter className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="ghost" size="sm" className="p-2">
+                  <Link href="https://www.linkedin.com/company/veloxpack/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                    <Linkedin className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
 
