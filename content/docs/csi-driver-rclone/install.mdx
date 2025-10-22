@@ -21,10 +21,6 @@ make container
 
 # (optional) Push to your registry
 make push
-
-# Use your registry and tag when deploying
-export REGISTRY=your-registry.com
-export IMAGE_VERSION=latest
 ```
 
 ## Install with kubectl (Kustomize)
@@ -38,30 +34,32 @@ sed -i "s|image: .*|image: ${REGISTRY}/csi-rclone:${IMAGE_VERSION}|g" deploy/csi
 kubectl apply -k deploy/
 ```
 
-### Custom Kustomization
+## Install with Helm (Recommended)
 
-```yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-- namespace-csi-rclone.yaml
-- rbac-csi-rclone.yaml
-- csi-rclone-controller.yaml
-- csi-rclone-node.yaml
-- csi-rclone-driverinfo.yaml
-images:
-- name: csi-rclone
-  newName: your-registry.com/csi-rclone
-  newTag: latest
-```
+Install directly from the OCI registry:
 
 ```bash
-kubectl apply -k .
+# Install with default configuration
+helm install csi-rclone oci://registry-1.docker.io/veloxpack/csi-driver-rclone-charts
+
+# Install in a specific namespace
+helm install csi-rclone oci://registry-1.docker.io/veloxpack/csi-driver-rclone-charts \
+  --namespace veloxpack --create-namespace
 ```
 
-## Install with Helm
+Verify the installation:
 
-Create a `values.yaml`:
+```bash
+# Check release status
+helm list -n veloxpack
+
+# Verify pods are running
+kubectl get pods -n veloxpack -l app.kubernetes.io/name=csi-driver-rclone
+```
+
+### Custom Configuration
+
+Create a `values.yaml` for custom configuration:
 
 ```yaml
 image:
@@ -90,20 +88,27 @@ node:
 ```
 
 ```bash
-helm install csi-rclone ./charts/latest/csi-driver-rclone -f values.yaml -n kube-system
+helm install csi-rclone oci://registry-1.docker.io/veloxpack/csi-driver-rclone-charts \
+  -f values.yaml --namespace veloxpack --create-namespace
 ```
 
 ## Verify Installation
 
 ```bash
-# Check driver pods
+# Check driver pods (for Helm installation)
+kubectl get pods -n veloxpack -l app.kubernetes.io/name=csi-driver-rclone
+
+# Check driver pods (for kubectl installation)
 kubectl get pods -n kube-system -l app=csi-rclone-controller
 kubectl get pods -n kube-system -l app=csi-rclone-node
 
 # Check CSIDriver
 kubectl get csidriver rclone.csi.veloxpack.io
 
-# Check driver logs
+# Check driver logs (for Helm installation)
+kubectl logs -n veloxpack -l app.kubernetes.io/name=csi-driver-rclone
+
+# Check driver logs (for kubectl installation)
 kubectl logs -n kube-system -l app=csi-rclone-controller
 kubectl logs -n kube-system -l app=csi-rclone-node
 ```
@@ -150,11 +155,17 @@ cache-dir: "/tmp/rclone-vfs-cache/"
 ### Debug Commands
 
 ```bash
-# Check driver status
+# Check driver status (for Helm installation)
+kubectl get pods -n veloxpack -l app.kubernetes.io/name=csi-driver-rclone
+
+# Check driver status (for kubectl installation)
 kubectl get pods -n kube-system -l app=csi-rclone-controller
 kubectl get pods -n kube-system -l app=csi-rclone-node
 
-# Check driver logs
+# Check driver logs (for Helm installation)
+kubectl logs -n veloxpack -l app.kubernetes.io/name=csi-driver-rclone --tail=100
+
+# Check driver logs (for kubectl installation)
 kubectl logs -n kube-system -l app=csi-rclone-controller --tail=100
 kubectl logs -n kube-system -l app=csi-rclone-node --tail=100
 

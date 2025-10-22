@@ -9,13 +9,16 @@ The Rclone CSI Driver enables Kubernetes to mount 50+ cloud storage backends as 
 
 ### Key Features
 
-- **50+ Storage Backends**: Amazon S3, Google Cloud Storage, Azure Blob, Dropbox, SFTP, and more
-- **Direct Library Integration**: Uses rclone as a Go library - no external binary required
+- **50+ Storage Providers**: Supports Amazon S3, Google Cloud Storage, Azure Blob, Dropbox, SFTP, and many more
+- **No External Dependencies**: Uses rclone as a Go library directly - no rclone binary installation required
+- **No Process Overhead**: Direct library integration means no subprocess spawning or external process management
 - **Dynamic Volume Provisioning**: Create persistent volumes via StorageClass
+- **Secret-based Configuration**: Secure credential management using Kubernetes secrets
+- **Inline Configuration**: Direct configuration in StorageClass parameters
 - **Template Variable Support**: Dynamic path substitution using PVC/PV metadata
 - **VFS Caching**: High-performance caching with configurable options
 - **No Staging Required**: Direct mount without volume staging
-- **Multi-tenant Support**: Isolated storage paths per namespace/PVC
+- **Flexible Backend Support**: Choose between minimal or full backend support for smaller images
 
 ### Architecture
 
@@ -25,12 +28,19 @@ The driver implements the CSI specification with three main components:
 - **Controller Server**: Volume lifecycle management (create/delete)
 - **Node Server**: Volume mounting/unmounting on nodes
 
+**Key Design Decisions:**
+1. **No Staging**: Rclone volumes don't require staging
+2. **Direct Rclone Integration**: Uses rclone's Go library directly
+3. **Remote Creation**: Creates temporary remotes for each mount
+4. **VFS Caching**: Leverages rclone's VFS for improved performance
+5. **Template Variable Support**: Dynamic path substitution using PVC/PV metadata
+
 ### Supported Kubernetes Versions
 
 | Driver Version | Kubernetes Version | Status |
 |---|---|---|
-| master branch | 1.20+ | GA |
-| v1.0.0 | 1.20+ | GA |
+| main branch | 1.20+ | GA |
+| v0.1.0 | 1.20+ | GA |
 
 ### Requirements
 
