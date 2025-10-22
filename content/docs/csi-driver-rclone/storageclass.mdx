@@ -269,8 +269,8 @@ kubectl get csidriver rclone.csi.veloxpack.io
 kubectl describe pvc my-pvc
 
 # Check driver logs
-kubectl logs -l app=csi-rclone-controller -n kube-system
-kubectl logs -l app=csi-rclone-node -n kube-system
+kubectl logs -l app=csi-rclone-controller -n veloxpack
+kubectl logs -l app=csi-rclone-node -n veloxpack
 ```
 
 ## Best Practices

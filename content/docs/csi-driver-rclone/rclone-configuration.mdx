@@ -207,7 +207,7 @@ kubectl get secret rclone-secret -o yaml
 kubectl get secret rclone-secret -o jsonpath='{.data.configData}' | base64 -d
 
 # Check driver logs
-kubectl logs -l app=csi-rclone-node -n kube-system
+kubectl logs -l app=csi-rclone-node -n veloxpack
 
 # Check mount options
 kubectl describe pv pv-rclone

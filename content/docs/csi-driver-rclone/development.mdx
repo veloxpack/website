@@ -179,12 +179,12 @@ go test ./test/e2e/...
 
 ```bash
 # Check driver pods
-kubectl get pods -n kube-system -l app=csi-rclone-controller
-kubectl get pods -n kube-system -l app=csi-rclone-node
+kubectl get pods -n veloxpack -l app=csi-rclone-controller
+kubectl get pods -n veloxpack -l app=csi-rclone-node
 
 # Tail logs
-kubectl logs -l app=csi-rclone-controller -f -n kube-system
-kubectl logs -l app=csi-rclone-node -f -n kube-system
+kubectl logs -l app=csi-rclone-controller -f -n veloxpack
+kubectl logs -l app=csi-rclone-node -f -n veloxpack
 
 # Check CSIDriver
 kubectl get csidriver rclone.csi.veloxpack.io
@@ -193,7 +193,7 @@ kubectl get csidriver rclone.csi.veloxpack.io
 kubectl get events --sort-by=.metadata.creationTimestamp
 
 # Check mount points
-kubectl exec -n kube-system -l app=csi-rclone-node -- mount | grep rclone
+kubectl exec -n veloxpack -l app=csi-rclone-node -- mount | grep rclone
 ```
 
 ## Architecture Details

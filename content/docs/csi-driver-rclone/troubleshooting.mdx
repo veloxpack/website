@@ -13,14 +13,14 @@ This guide covers common issues, debugging techniques, and solutions for the rcl
 
 ```bash
 # Check controller pods
-kubectl get pods -n kube-system -l app=csi-rclone-controller
+kubectl get pods -n veloxpack -l app=csi-rclone-controller
 
 # Check node pods
-kubectl get pods -n kube-system -l app=csi-rclone-node
+kubectl get pods -n veloxpack -l app=csi-rclone-node
 
 # Check pod status
-kubectl describe pod -n kube-system -l app=csi-rclone-controller
-kubectl describe pod -n kube-system -l app=csi-rclone-node
+kubectl describe pod -n veloxpack -l app=csi-rclone-controller
+kubectl describe pod -n veloxpack -l app=csi-rclone-node
 ```
 
 ### Check CSIDriver Resource
@@ -37,10 +37,10 @@ kubectl describe csidriver rclone.csi.veloxpack.io
 
 ```bash
 # Check if the driver is working correctly
-kubectl exec -n kube-system -l app=csi-rclone-node -- /rcloneplugin --help
+kubectl exec -n veloxpack -l app=csi-rclone-node -- /rcloneplugin --help
 
 # Check driver version information
-kubectl logs -n kube-system -l app=csi-rclone-node --tail=10 | grep "DRIVER INFORMATION" -A 10
+kubectl logs -n veloxpack -l app=csi-rclone-node --tail=10 | grep "DRIVER INFORMATION" -A 10
 ```
 
 ## Common Issues
@@ -64,13 +64,13 @@ kubectl logs -n kube-system -l app=csi-rclone-node --tail=10 | grep "DRIVER INFO
 kubectl describe node <node-name>
 
 # Check if FUSE is available
-kubectl exec -n kube-system -l app=csi-rclone-node -- ls /dev/fuse
+kubectl exec -n veloxpack -l app=csi-rclone-node -- ls /dev/fuse
 
 # Check resource limits
-kubectl describe pod -n kube-system -l app=csi-rclone-controller
+kubectl describe pod -n veloxpack -l app=csi-rclone-controller
 
 # Check image pull
-kubectl describe pod -n kube-system -l app=csi-rclone-controller | grep -i image
+kubectl describe pod -n veloxpack -l app=csi-rclone-controller | grep -i image
 ```
 
 ### 2. Volume Mount Failures
@@ -96,7 +96,7 @@ kubectl describe pvc <pvc-name>
 kubectl describe pod <pod-name>
 
 # Check driver logs
-kubectl logs -n kube-system -l app=csi-rclone-node --tail=100
+kubectl logs -n veloxpack -l app=csi-rclone-node --tail=100
 
 # Verify secret contents
 kubectl get secret <secret-name> -o yaml
@@ -121,10 +121,10 @@ kubectl get secret <secret-name> -o jsonpath='{.data.configData}' | base64 -d
 kubectl get secret rclone-secret -o jsonpath='{.data.configData}' | base64 -d
 
 # Verify credentials manually
-kubectl exec -n kube-system -l app=csi-rclone-node -- /rcloneplugin --help
+kubectl exec -n veloxpack -l app=csi-rclone-node -- /rcloneplugin --help
 
 # Test configuration
-kubectl exec -n kube-system -l app=csi-rclone-node -- sh -c 'echo "[s3]
+kubectl exec -n veloxpack -l app=csi-rclone-node -- sh -c 'echo "[s3]
 type = s3
 provider = AWS
 access_key_id = YOUR_KEY
@@ -151,7 +151,7 @@ region = us-east-1" > /tmp/test.conf && rclone lsd s3:test-bucket --config /tmp/
 kubectl describe pv <pv-name> | grep -i mount
 
 # Monitor resource usage
-kubectl top pods -n kube-system -l app=csi-rclone-node
+kubectl top pods -n veloxpack -l app=csi-rclone-node
 
 # Adjust cache settings
 # Add to StorageClass mountOptions:
@@ -176,7 +176,7 @@ kubectl top pods -n kube-system -l app=csi-rclone-node
 
 ```bash
 # Test connectivity from driver pod
-kubectl exec -n kube-system -l app=csi-rclone-node -- nslookup s3.amazonaws.com
+kubectl exec -n veloxpack -l app=csi-rclone-node -- nslookup s3.amazonaws.com
 
 # Check network policies
 kubectl get networkpolicies
@@ -191,29 +191,29 @@ kubectl debug node/<node-name> -it --image=busybox -- nslookup s3.amazonaws.com
 
 ```bash
 # Controller logs
-kubectl logs -n kube-system -l app=csi-rclone-controller --tail=100
+kubectl logs -n veloxpack -l app=csi-rclone-controller --tail=100
 
 # Node logs
-kubectl logs -n kube-system -l app=csi-rclone-node --tail=100
+kubectl logs -n veloxpack -l app=csi-rclone-node --tail=100
 
 # Follow logs
-kubectl logs -n kube-system -l app=csi-rclone-node -f
+kubectl logs -n veloxpack -l app=csi-rclone-node -f
 
 # Previous container logs
-kubectl logs -n kube-system -l app=csi-rclone-node --previous
+kubectl logs -n veloxpack -l app=csi-rclone-node --previous
 ```
 
 ### Check Mount Points
 
 ```bash
 # List mount points
-kubectl exec -n kube-system -l app=csi-rclone-node -- mount | grep rclone
+kubectl exec -n veloxpack -l app=csi-rclone-node -- mount | grep rclone
 
 # Check mount options
-kubectl exec -n kube-system -l app=csi-rclone-node -- cat /proc/mounts | grep rclone
+kubectl exec -n veloxpack -l app=csi-rclone-node -- cat /proc/mounts | grep rclone
 
 # Check FUSE mounts
-kubectl exec -n kube-system -l app=csi-rclone-node -- ls -la /dev/fuse
+kubectl exec -n veloxpack -l app=csi-rclone-node -- ls -la /dev/fuse
 ```
 
 ### Check Volume Status
@@ -339,20 +339,20 @@ args:
 
 ```bash
 # Restart controller
-kubectl rollout restart deployment/csi-rclone-controller -n kube-system
+kubectl rollout restart deployment/csi-rclone-controller -n veloxpack
 
 # Restart node daemonset
-kubectl rollout restart daemonset/csi-rclone-node -n kube-system
+kubectl rollout restart daemonset/csi-rclone-node -n veloxpack
 ```
 
 ### Clean Up Corrupted Mounts
 
 ```bash
 # Force unmount on specific node
-kubectl exec -n kube-system -l app=csi-rclone-node -- umount -f /var/lib/kubelet/pods/*/volumes/kubernetes.io~csi/*/mount
+kubectl exec -n veloxpack -l app=csi-rclone-node -- umount -f /var/lib/kubelet/pods/*/volumes/kubernetes.io~csi/*/mount
 
 # Restart node daemonset
-kubectl rollout restart daemonset/csi-rclone-node -n kube-system
+kubectl rollout restart daemonset/csi-rclone-node -n veloxpack
 ```
 
 ### Reset Driver State
@@ -371,8 +371,8 @@ kubectl apply -f deploy/csi-rclone-driverinfo.yaml
 
 ```bash
 # Collect logs for debugging
-kubectl logs -n kube-system -l app=csi-rclone-controller > controller.log
-kubectl logs -n kube-system -l app=csi-rclone-node > node.log
+kubectl logs -n veloxpack -l app=csi-rclone-controller > controller.log
+kubectl logs -n veloxpack -l app=csi-rclone-node > node.log
 kubectl get events --sort-by=.metadata.creationTimestamp > events.log
 ```
 

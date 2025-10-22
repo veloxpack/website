@@ -96,8 +96,8 @@ spec:
 
 ```bash
 # Check driver pods
-kubectl get pods -n kube-system -l app=csi-rclone-controller
-kubectl get pods -n kube-system -l app=csi-rclone-node
+kubectl get pods -n veloxpack -l app=csi-rclone-controller
+kubectl get pods -n veloxpack -l app=csi-rclone-node
 
 # Check CSIDriver
 kubectl get csidriver rclone.csi.veloxpack.io
